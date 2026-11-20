@@ -1,29 +1,42 @@
 // Vice Cover Studio — cover renderer.
 // Draws a multi-panel GTA-style poster onto any canvas: a Vice City sunset
 // backdrop, a glowing sun, palm silhouettes, the photo panels with their own
-// crop / zoom / pan / grade, and bold condensed caption lettering.
-// Everything is drawn in code; no external images, no Rockstar artwork.
+// crop / zoom / pan / grade, and bold condensed caption lettering in the
+// vendored Anton (OFL) with a sunset-gradient fill and a Pacifico subtitle.
+// Layouts: Quad, Hero, Triptych and Full-bleed. Everything is drawn in code;
+// no external images, no Rockstar artwork.
 
 const GRADES = {
   sunset: { tint: 'rgba(255, 80, 40, 0.22)', filter: 'saturate(1.45) contrast(1.08) sepia(0.22) hue-rotate(-12deg)' },
   neon: { tint: 'rgba(0, 229, 255, 0.10)', filter: 'saturate(1.9) contrast(1.15) hue-rotate(12deg)' },
   noir: { tint: 'rgba(0, 0, 0, 0.18)', filter: 'grayscale(1) contrast(1.22) brightness(1.05)' },
   clean: { tint: 'rgba(0, 0, 0, 0)', filter: 'none' },
+  // Vice: purple-and-teal duotone, the after-dark side of the city.
+  vice: { tint: 'rgba(124, 58, 237, 0.14)', filter: 'saturate(1.7) contrast(1.14) hue-rotate(18deg)' },
 };
 
+// Title lettering uses the vendored Anton (OFL) with a sunset-gradient fill;
+// the subtitle is set in the vendored Pacifico script. `titleGradient` is a
+// list of left-to-right gradient stops; a style without one stays solid.
 const CAPTION_STYLES = {
-  sunset: { fill: '#ffffff', stroke: '#ff2d78', shadow: '#ff7a18', accent: '#ffb400' },
-  neon: { fill: '#ffffff', stroke: '#00e5ff', shadow: '#ff2d78', accent: '#00e5ff' },
+  sunset: { fill: '#ffffff', stroke: '#ff2d78', shadow: '#ff7a18', accent: '#ffb400', titleGradient: ['#ff2d78', '#ff7a18', '#ffb400'] },
+  neon: { fill: '#ffffff', stroke: '#00e5ff', shadow: '#ff2d78', accent: '#00e5ff', titleGradient: ['#00e5ff', '#b537f2', '#ff2d78'] },
   mono: { fill: '#ffffff', stroke: '#111111', shadow: '#000000', accent: '#ffffff' },
+  vice: { fill: '#ffffff', stroke: '#7c3aed', shadow: '#00e5ff', accent: '#e879f9', titleGradient: ['#e879f9', '#7c3aed', '#00e5ff'] },
 };
 
 /** How many panels a layout shows. */
 export function panelCountForLayout(layout) {
+  if (layout === 'fullbleed') return 1;
   return layout === 'quad' ? 4 : 3;
 }
 
 /** Panel rectangles (in canvas pixels) for a layout, inside the photo area. */
 export function layoutPanels(layout, x, y, w, h, gutter) {
+  if (layout === 'fullbleed') {
+    // One photo fills the whole photo area, edge to edge.
+    return [{ x, y, w, h }];
+  }
   if (layout === 'triptych') {
     const pw = (w - gutter * 2) / 3;
     return [0, 1, 2].map((i) => ({ x: x + i * (pw + gutter), y, w: pw, h }));
@@ -75,12 +88,14 @@ export function drawSunsetBackdrop(ctx, w, h) {
   ctx.fill();
 }
 
-/** One palm-tree silhouette, drawn with canvas paths, at (x, y) = trunk base. */
+/** One palm-tree silhouette, drawn with canvas paths, at (x, y) = trunk base.
+ *  Thin trunk and long drooping fronds: at small sizes a thick frond reads as
+ *  a blob, so the lines stay fine and the crown spreads wide. */
 export function drawPalm(ctx, x, y, s, color) {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = Math.max(2, s * 0.06);
+  ctx.lineWidth = Math.max(1.5, s * 0.032);
   ctx.lineCap = 'round';
   // Trunk, leaning slightly.
   ctx.beginPath();
@@ -89,22 +104,37 @@ export function drawPalm(ctx, x, y, s, color) {
   ctx.stroke();
   const tx = x + s * 0.22;
   const ty = y - s * 0.95;
-  // Fronds: seven arcs fanning out from the crown.
-  for (let i = 0; i < 7; i++) {
-    const a = Math.PI * (0.08 + (i / 6) * 0.84);
-    const ex = tx + Math.cos(a) * s * 0.62;
-    const ey = ty - Math.sin(a) * s * 0.34 + s * 0.22;
+  // Fronds: nine long arcs fanning out from the crown, drooping at the tips.
+  for (let i = 0; i < 9; i++) {
+    const a = Math.PI * (0.04 + (i / 8) * 0.92);
+    const ex = tx + Math.cos(a) * s * 0.78;
+    const ey = ty - Math.sin(a) * s * 0.38 + s * 0.3;
     ctx.beginPath();
     ctx.moveTo(tx, ty);
-    ctx.quadraticCurveTo(tx + Math.cos(a) * s * 0.34, ty - Math.sin(a) * s * 0.5, ex, ey);
+    ctx.quadraticCurveTo(tx + Math.cos(a) * s * 0.42, ty - Math.sin(a) * s * 0.55, ex, ey);
     ctx.stroke();
   }
   // Coconuts.
   ctx.beginPath();
-  ctx.arc(tx - s * 0.03, ty + s * 0.05, s * 0.045, 0, Math.PI * 2);
-  ctx.arc(tx + s * 0.05, ty + s * 0.06, s * 0.04, 0, Math.PI * 2);
+  ctx.arc(tx - s * 0.03, ty + s * 0.05, s * 0.04, 0, Math.PI * 2);
+  ctx.arc(tx + s * 0.05, ty + s * 0.06, s * 0.035, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+}
+
+/** One five-pointed star, filled, centred at (cx, cy) with radius r. */
+export function drawStar(ctx, cx, cy, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 === 0 ? r : r * 0.45;
+    const x = cx + Math.cos(a) * rr;
+    const y = cy + Math.sin(a) * rr;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
 }
 
 /** Draws one photo into a panel rect with cover-fit, zoom, pan and flip. */
@@ -141,7 +171,11 @@ export function drawPanelPhoto(ctx, photo, rect, panel) {
   ctx.restore();
 }
 
-/** Bold condensed caption lettering, sized to fit the width, with outline. */
+/** Bold condensed caption lettering, sized to fit the width, with outline.
+ *  The title is set in the vendored Anton (OFL) with a sunset-gradient fill;
+ *  the subtitle is a neon script line in the vendored Pacifico. Both fall
+ *  back to the old system stack if the fonts fail to load. The subtitle is
+ *  capped at 72% of the width so it never runs under the band's corner art. */
 export function drawCaption(ctx, w, bandY, bandH, title, subtitle, styleName, outline) {
   const style = CAPTION_STYLES[styleName] ?? CAPTION_STYLES.sunset;
   const titleText = (title || '').trim().toUpperCase();
@@ -153,11 +187,11 @@ export function drawCaption(ctx, w, bandY, bandH, title, subtitle, styleName, ou
   ctx.textBaseline = 'middle';
   if (subText) {
     let subSize = bandH * 0.16;
-    ctx.font = `900 ${subSize}px "Arial Black", Arial, sans-serif`;
-    try { ctx.letterSpacing = `${Math.round(subSize * 0.42)}px`; } catch { /* older canvas */ }
-    while (ctx.measureText(subText).width > w * 0.86 && subSize > 10) {
+    ctx.font = `${subSize}px "Pacifico", "Segoe Script", cursive`;
+    try { ctx.letterSpacing = `${Math.round(subSize * 0.08)}px`; } catch { /* older canvas */ }
+    while (ctx.measureText(subText).width > w * 0.72 && subSize > 10) {
       subSize -= 1;
-      ctx.font = `900 ${subSize}px "Arial Black", Arial, sans-serif`;
+      ctx.font = `${subSize}px "Pacifico", "Segoe Script", cursive`;
     }
     ctx.fillStyle = style.accent;
     ctx.shadowColor = style.shadow;
@@ -167,13 +201,15 @@ export function drawCaption(ctx, w, bandY, bandH, title, subtitle, styleName, ou
   }
   if (titleText) {
     let size = bandH * (subText ? 0.52 : 0.62);
-    ctx.font = `900 ${size}px "Arial Black", Arial, sans-serif`;
+    const titleFont = (s) => `${s}px "Anton", "Arial Black", Arial, sans-serif`;
+    ctx.font = titleFont(size);
     try { ctx.letterSpacing = `${Math.round(size * 0.04)}px`; } catch { /* older canvas */ }
     while (ctx.measureText(titleText).width > w * 0.92 && size > 12) {
       size -= 2;
-      ctx.font = `900 ${size}px "Arial Black", Arial, sans-serif`;
+      ctx.font = titleFont(size);
     }
     const ty = bandY + bandH * (subText ? 0.62 : 0.52);
+    const tw = ctx.measureText(titleText).width;
     ctx.lineJoin = 'round';
     ctx.shadowColor = style.shadow;
     ctx.shadowBlur = size * 0.28;
@@ -183,7 +219,14 @@ export function drawCaption(ctx, w, bandY, bandH, title, subtitle, styleName, ou
       ctx.lineWidth = Math.max(2, size * 0.09);
       ctx.strokeText(titleText, cx, ty);
     }
-    ctx.fillStyle = style.fill;
+    if (style.titleGradient) {
+      const grad = ctx.createLinearGradient(cx - tw / 2, 0, cx + tw / 2, 0);
+      const stops = style.titleGradient;
+      stops.forEach((c, i) => grad.addColorStop(stops.length === 1 ? 0 : i / (stops.length - 1), c));
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = style.fill;
+    }
     ctx.fillText(titleText, cx, ty);
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
@@ -248,22 +291,9 @@ export function drawCover(canvas, state) {
     ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
   }
 
-  // Diagonal accent bar across the top-left corner.
-  ctx.save();
-  ctx.fillStyle = '#ff2d78';
-  ctx.beginPath();
-  const barW = Math.min(w, h) * 0.34;
-  ctx.moveTo(border, border + barW * 0.16);
-  ctx.lineTo(border + barW, border);
-  ctx.lineTo(border + barW, border + barW * 0.1);
-  ctx.lineTo(border, border + barW * 0.26);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#00e5ff';
-  ctx.fillRect(border, border + barW * 0.26, barW * 0.55, Math.max(3, gutter * 0.6));
-  ctx.restore();
-
-  // Caption band: dark gradient, palms at the edges, lettering on top.
+  // Caption band: dark gradient, corner art, lettering on top. The diagonal
+  // accent bar lives clipped inside the band now — it used to cross the photo
+  // area and cut across faces and panel boundaries.
   const bandY = border + photoH;
   const band = ctx.createLinearGradient(0, bandY, 0, bandY + bandH);
   band.addColorStop(0, 'rgba(24, 4, 44, 0.92)');
@@ -272,9 +302,45 @@ export function drawCover(canvas, state) {
   ctx.fillRect(border, bandY, w - border * 2, bandH);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(border, bandY, w - border * 2, Math.max(2, gutter * 0.4));
+
+  // Diagonal accent bar, top-left corner of the band, clipped to the band.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(border, bandY, w - border * 2, bandH);
+  ctx.clip();
+  const barW = Math.min(w, h) * 0.18;
+  const barTop = bandY + bandH * 0.05;
+  ctx.fillStyle = '#ff2d78';
+  ctx.beginPath();
+  ctx.moveTo(border, barTop + barW * 0.14);
+  ctx.lineTo(border + barW, barTop);
+  ctx.lineTo(border + barW, barTop + barW * 0.08);
+  ctx.lineTo(border, barTop + barW * 0.22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#00e5ff';
+  ctx.fillRect(border, barTop + barW * 0.22, barW * 0.55, Math.max(3, gutter * 0.6));
+  ctx.restore();
+
+  // Heat meter: five amber stars, top-right corner of the band.
+  const starR = bandH * 0.055;
+  const starGap = starR * 2.3;
+  const starY = bandY + bandH * 0.1;
+  ctx.save();
+  ctx.fillStyle = '#ffb400';
+  ctx.shadowColor = '#ff7a18';
+  ctx.shadowBlur = starR * 0.7;
+  for (let i = 0; i < 5; i++) {
+    drawStar(ctx, w - border - w * 0.02 - starR - (4 - i) * starGap, starY, starR);
+  }
+  ctx.restore();
+
+  // Palms at the edges, sunset-lit so they read against the dark band.
+  // Kept just short of the band's top edge so their fronds stay clear of
+  // the heat-meter stars in the top-right corner.
   const palmS = bandH * 0.95;
-  drawPalm(ctx, border + w * 0.045, bandY + bandH * 0.98, palmS, 'rgba(6, 1, 18, 0.9)');
-  drawPalm(ctx, w - border - w * 0.045, bandY + bandH * 0.98, palmS * 0.8, 'rgba(6, 1, 18, 0.9)');
+  drawPalm(ctx, border + w * 0.045, bandY + bandH * 0.98, palmS, 'rgba(255, 122, 24, 0.6)');
+  drawPalm(ctx, w - border - w * 0.045, bandY + bandH * 0.98, palmS * 0.75, 'rgba(255, 122, 24, 0.55)');
   drawCaption(ctx, w, bandY, bandH, state.title, state.subtitle, state.captionStyle, state.outline);
 
   drawFinish(ctx, w, h);

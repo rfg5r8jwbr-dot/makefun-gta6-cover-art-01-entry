@@ -1,8 +1,10 @@
 // Vice Cover Studio — editor wiring.
-// State: one cover = layout + up to 4 panels (each its own photo, zoom, pan,
-// grade, flip) + a two-line caption. Upload photos, click a panel to select
-// it, drag to pan, scroll to zoom, then export a PNG in a post size.
-// A `?shot=` query sets up a fixed scene for a screenshot (./shots.js).
+// State: one cover = layout (Quad, Hero, Triptych or Full-bleed) + up to 4
+// panels (each its own photo, zoom, pan, grade, flip) + a two-line caption.
+// Upload photos, click a panel to select it, drag to pan, scroll to zoom,
+// then export a PNG in a post size — or all three sizes at once. New photos
+// land face-safe: a wide panel shows the top of a portrait photo, not its
+// middle. A `?shot=` query sets up a fixed scene for a screenshot (./shots.js).
 import { drawCover, layoutPanels, panelCountForLayout } from './cover.js';
 import { runShot } from './shots.js';
 
@@ -66,9 +68,62 @@ export function loadImage(url) {
   });
 }
 
-/** Puts `img` into panel `i` (resetting its crop) and selects that panel. */
+/** Loads the vendored display fonts (Anton, Pacifico) before a draw that
+ *  needs them. The canvas falls back to the system stack until they arrive,
+ *  so the first paint redraws once they are ready. */
+let fontsReady = null;
+export function ensureFonts() {
+  if (!fontsReady) {
+    fontsReady = Promise.all([
+      document.fonts.load('16px "Anton"'),
+      document.fonts.load('16px "Pacifico"'),
+    ]).catch(() => { /* fall back to the system stack */ });
+  }
+  return fontsReady;
+}
+
+/** Face-safe default pan for a photo in a panel rect. When the panel is
+ *  wider than the photo, cover-fit crops the photo's top and bottom — and
+ *  faces live at the top. Shifting the photo down (positive panY) shows its
+ *  top edge instead of centring on the middle: the pan is computed from the
+ *  real slack, so it puts the window's top edge 5% into the photo even when
+ *  the panel is far wider than the photo (a fixed 0.15 is nowhere near enough
+ *  there). Capped at 0.6, the drag/slider clamp. No vertical crop, no shift. */
+export function faceSafePanY(img, rect, zoom = 1) {
+  if (!img || !rect || rect.h <= 0) return 0;
+  const photoAR = img.naturalWidth / img.naturalHeight;
+  if (rect.w / rect.h <= photoAR) return 0;
+  const base = Math.max(rect.w / img.naturalWidth, rect.h / img.naturalHeight);
+  const drawnH = img.naturalHeight * base * zoom;
+  const panY = ((drawnH - rect.h) / 2 - 0.05 * drawnH) / rect.h;
+  return Math.max(0, Math.min(0.6, panY));
+}
+
+/** The panel rect for panel `i` at the current preview size. */
+function panelRect(i) {
+  const area = photoArea();
+  return layoutPanels(state.layout, area.x, area.y, area.w, area.h, area.gutter)[i];
+}
+
+/** Horizontal pan for a photo in a panel rect, clamped to the real slack.
+ *  When cover-fit is width-driven the photo is exactly as wide as the panel,
+ *  so any panX would open a dark gap at one edge — the pan must be 0 there.
+ *  When height drives the fit there is slack to spend. */
+export function fitPanX(img, rect, zoom = 1, want = 0) {
+  if (!img || !rect || rect.w <= 0) return 0;
+  const base = Math.max(rect.w / img.naturalWidth, rect.h / img.naturalHeight);
+  const drawnW = img.naturalWidth * base * zoom;
+  const maxPanX = Math.max(0, (drawnW - rect.w) / (2 * rect.w));
+  return Math.max(-maxPanX, Math.min(maxPanX, want));
+}
+
+/** Puts `img` into panel `i` (resetting its crop) and selects that panel.
+ *  The panel keeps its own grade — the old code copied the previously
+ *  selected panel's grade by mistake. */
 function setPanelPhoto(i, img) {
-  state.panels[i] = { ...blankPanel(), photo: img, filter: selectedPanel().filter };
+  const keepFilter = state.panels[i].filter;
+  const panY = faceSafePanY(img, panelRect(i));
+  state.panels[i] = { ...blankPanel(), photo: img, filter: keepFilter, panY };
   state.selected = i;
   redraw();
 }
@@ -176,14 +231,21 @@ function bindButton(id, fn) {
   document.getElementById(id).addEventListener('click', fn);
 }
 
+/** Keeps the layout buttons, the panel-pick buttons and the selection in
+ *  sync with state.layout — including disabling picks past the panel count
+ *  (a Hero cover has no Panel 4 to pick). */
+function syncLayoutButtons() {
+  document.querySelectorAll('[data-layout]').forEach((b) => b.classList.toggle('active', b.dataset.layout === state.layout));
+  document.querySelectorAll('.panel-pick').forEach((b, i) => {
+    b.disabled = i >= panelCountForLayout(state.layout);
+  });
+  if (state.selected >= panelCountForLayout(state.layout)) state.selected = 0;
+}
+
 document.querySelectorAll('[data-layout]').forEach((btn) => {
   btn.addEventListener('click', () => {
     state.layout = btn.dataset.layout;
-    document.querySelectorAll('[data-layout]').forEach((b) => b.classList.toggle('active', b === btn));
-    document.querySelectorAll('.panel-pick').forEach((b, i) => {
-      b.disabled = i >= panelCountForLayout(state.layout);
-    });
-    if (state.selected >= panelCountForLayout(state.layout)) state.selected = 0;
+    syncLayoutButtons();
     redraw();
   });
 });
@@ -267,9 +329,12 @@ bindButton('clearPhotos', () => {
   redraw();
 });
 
-/** Renders the cover at the exact export size and downloads it as a PNG. */
-export function exportCover() {
-  const size = EXPORT_SIZES[state.exportSize];
+/** Renders the cover at the exact export size and downloads it as a PNG.
+ *  Waits for the vendored fonts first, so the export never falls back to
+ *  the system stack. */
+export async function exportCover(sizeKey = state.exportSize) {
+  await ensureFonts();
+  const size = EXPORT_SIZES[sizeKey];
   const off = document.createElement('canvas');
   off.width = size.w;
   off.height = size.h;
@@ -288,6 +353,23 @@ export function exportCover() {
 }
 bindButton('export', () => exportCover());
 
+/** Exports all three post sizes in turn, with a pause between downloads so
+ *  the browser can keep up. The size picker is restored afterwards. */
+export async function exportAllSizes() {
+  const previous = state.exportSize;
+  const saved = [];
+  for (const key of Object.keys(EXPORT_SIZES)) {
+    saved.push(await exportCover(key));
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  state.exportSize = previous;
+  document.querySelectorAll('[data-export-size]').forEach((b) => b.classList.toggle('active', b.dataset.exportSize === previous));
+  redraw();
+  status.textContent = `Saved all 3 sizes (${saved.map((s) => s.name).join(', ')}).`;
+  return saved;
+}
+bindButton('exportAll', () => exportAllSizes());
+
 // ---- screenshot scenes ----
 const shot = new URLSearchParams(location.search).get('shot');
 if (shot) {
@@ -300,17 +382,35 @@ if (shot) {
     state.exportSize = opts.size;
     titleInput.value = opts.caption;
     subtitleInput.value = opts.subtitle;
-    document.querySelectorAll('[data-layout]').forEach((b) => b.classList.toggle('active', b.dataset.layout === opts.layout));
+    syncLayoutButtons();
     document.querySelectorAll('[data-caption-style]').forEach((b) => b.classList.toggle('active', b.dataset.captionStyle === state.captionStyle));
     document.querySelectorAll('[data-export-size]').forEach((b) => b.classList.toggle('active', b.dataset.exportSize === opts.size));
-    const img = await loadImage(`samples/${opts.photo}.jpg`);
+    redraw(); // sizes the canvas to the export size, so panelRect() is exact
+    // A real poster mixes photos: alternate the shot's photos across panels
+    // instead of tiling one photo everywhere.
+    const names = opts.photos.length ? opts.photos : [opts.photo];
+    const images = [];
+    for (const name of names) images.push(await loadImage(`samples/${name}.jpg`));
     const count = panelCountForLayout(opts.layout);
     for (let i = 0; i < count; i++) {
-      state.panels[i] = { ...blankPanel(), photo: img, filter: opts.grade, zoom: 1 + i * 0.08, panX: (i % 2 ? -0.06 : 0.06) };
+      const img = images[i % images.length];
+      const zoom = 1 + i * 0.08;
+      const rect = panelRect(i);
+      state.panels[i] = {
+        ...blankPanel(),
+        photo: img,
+        filter: opts.grade,
+        zoom,
+        panX: fitPanX(img, rect, zoom, (i % 2 ? -0.06 : 0.06)),
+        panY: faceSafePanY(img, rect, zoom),
+      };
     }
     state.selected = 0;
+    await ensureFonts();
     redraw();
   });
 } else {
   redraw();
+  // Repaint once the display fonts arrive, so the live preview uses Anton.
+  ensureFonts().then(() => redraw());
 }
