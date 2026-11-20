@@ -1,9 +1,12 @@
-/* Vice Cover Studio — dark neon editor UI. System fonts only, no network. */
+/* Vice Cover Studio — dark neon editor UI. Vendored display fonts (Anton and
+ * Pacifico, SIL OFL, in fonts/) — no network, everything loads locally. */
+@font-face { font-family: "Anton"; src: url("./fonts/Anton-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Pacifico"; src: url("./fonts/Pacifico-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; background: #0d0218; color: #f4eefc; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
 .app { display: flex; gap: 28px; align-items: flex-start; justify-content: center; min-height: 100vh; padding: 24px; }
 .controls { width: 340px; flex: none; display: flex; flex-direction: column; gap: 14px; }
-.controls h1 { margin: 0; font-family: "Arial Black", Arial, sans-serif; font-size: 30px; line-height: 1.05; letter-spacing: 1px; color: #fff; text-shadow: 0 0 18px rgba(255, 45, 120, 0.8), 3px 3px 0 #ff2d78; }
+.controls h1 { margin: 0; font-family: "Anton", "Arial Black", Arial, sans-serif; font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: 2px; color: #fff; text-shadow: 0 0 18px rgba(255, 45, 120, 0.8), 3px 3px 0 #ff2d78; }
 .controls h1 span { color: #00e5ff; text-shadow: 0 0 18px rgba(0, 229, 255, 0.8), 3px 3px 0 #00b3cc; }
 .tagline { margin: 0; color: #c9a8e8; }
 fieldset { border: 1px solid #4a2a6e; border-radius: 10px; padding: 12px; margin: 0; background: #180a2a; }
@@ -23,6 +26,7 @@ button:hover { border-color: #ff2d78; }
 button.active { background: #ff2d78; border-color: #ff2d78; color: #fff; box-shadow: 0 0 12px rgba(255, 45, 120, 0.55); }
 button.ghost { background: transparent; }
 button.export { width: 100%; margin-top: 10px; padding: 12px; font-size: 17px; background: linear-gradient(90deg, #ff2d78, #ff7a18); border: 0; color: #fff; box-shadow: 0 4px 18px rgba(255, 45, 120, 0.5); }
+button.export.all { background: linear-gradient(90deg, #7c3aed, #00e5ff); box-shadow: 0 4px 18px rgba(124, 58, 237, 0.5); }
 button.export:hover { filter: brightness(1.1); }
 button:disabled { opacity: 0.35; cursor: default; }
 #status { margin: 8px 0 0; color: #7dffce; min-height: 1.4em; }
