@@ -1,0 +1,42 @@
+/* Vice Cover Studio — dark neon editor UI. System fonts only, no network. */
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: #0d0218; color: #f4eefc; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.app { display: flex; gap: 28px; align-items: flex-start; justify-content: center; min-height: 100vh; padding: 24px; }
+.controls { width: 340px; flex: none; display: flex; flex-direction: column; gap: 14px; }
+.controls h1 { margin: 0; font-family: "Arial Black", Arial, sans-serif; font-size: 30px; line-height: 1.05; letter-spacing: 1px; color: #fff; text-shadow: 0 0 18px rgba(255, 45, 120, 0.8), 3px 3px 0 #ff2d78; }
+.controls h1 span { color: #00e5ff; text-shadow: 0 0 18px rgba(0, 229, 255, 0.8), 3px 3px 0 #00b3cc; }
+.tagline { margin: 0; color: #c9a8e8; }
+fieldset { border: 1px solid #4a2a6e; border-radius: 10px; padding: 12px; margin: 0; background: #180a2a; }
+legend { font-weight: 700; color: #ffb400; padding: 0 6px; }
+label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; margin-top: 8px; }
+label:first-child { margin-top: 0; }
+label.check { flex-direction: row; align-items: center; gap: 8px; font-weight: 400; }
+input[type=text], select { font: inherit; color: #fff; background: #2a1145; padding: 8px 10px; border: 1px solid #6b3aa0; border-radius: 6px; }
+input[type=range] { width: 100%; accent-color: #ff2d78; }
+input[type=file] { font: inherit; color: #c9a8e8; }
+.val { color: #00e5ff; font-weight: 400; }
+.hint { margin: 8px 0 0; color: #a98cc9; font-size: 13px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.row button { flex: 1 1 auto; }
+button { font: inherit; font-weight: 700; padding: 9px 10px; border: 1px solid #6b3aa0; border-radius: 6px; background: #2a1145; color: #f4eefc; cursor: pointer; }
+button:hover { border-color: #ff2d78; }
+button.active { background: #ff2d78; border-color: #ff2d78; color: #fff; box-shadow: 0 0 12px rgba(255, 45, 120, 0.55); }
+button.ghost { background: transparent; }
+button.export { width: 100%; margin-top: 10px; padding: 12px; font-size: 17px; background: linear-gradient(90deg, #ff2d78, #ff7a18); border: 0; color: #fff; box-shadow: 0 4px 18px rgba(255, 45, 120, 0.5); }
+button.export:hover { filter: brightness(1.1); }
+button:disabled { opacity: 0.35; cursor: default; }
+#status { margin: 8px 0 0; color: #7dffce; min-height: 1.4em; }
+.fineprint { margin: 0; color: #8a6aa8; font-size: 12px; }
+.preview { flex: 1 1 auto; max-width: 860px; position: sticky; top: 24px; }
+#cover { display: block; width: 100%; height: auto; box-shadow: 0 12px 44px rgba(0, 0, 0, 0.6), 0 0 0 1px #4a2a6e; cursor: crosshair; background: #2b0f4d; }
+.preview-hint { text-align: center; color: #a98cc9; font-size: 13px; }
+/* Screenshot mode: cover only, controls hidden, canvas fills the viewport. */
+body.shot-cover .controls, body.shot-cover .preview-hint { display: none; }
+body.shot-cover .app { padding: 0; display: block; }
+body.shot-cover .preview { max-width: none; position: static; }
+body.shot-cover #cover { width: 100vw; height: 100vh; object-fit: contain; box-shadow: none; background: #2b0f4d; }
+@media (max-width: 900px) {
+  .app { flex-direction: column; }
+  .controls { width: 100%; }
+  .preview { position: static; max-width: 100%; }
+}

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vice Cover Studio — GTA-style cover maker</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<main class="app">
+  <section class="controls" aria-label="Cover editor">
+    <h1>VICE COVER <span>STUDIO</span></h1>
+    <p class="tagline">Your photo, Vice City sunset, bold cover lettering — exported as a PNG in three clicks.</p>
+
+    <fieldset>
+      <legend>1 · Photos</legend>
+      <label class="file-label">Upload 1–4 photos
+        <input id="photo" type="file" accept="image/*" multiple>
+      </label>
+      <p class="hint">Or drop photos straight onto the preview. Click a panel to crop it, drag to pan, scroll to zoom.</p>
+      <div class="row">
+        <button id="sampleBoulevard" type="button">Use sample: Boulevard</button>
+        <button id="samplePier" type="button">Use sample: Pier</button>
+      </div>
+      <div class="row">
+        <button id="fillAll" type="button">Fill all panels</button>
+        <button id="clearPhotos" type="button" class="ghost">Clear photos</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2 · Layout</legend>
+      <div class="row">
+        <button type="button" data-layout="quad" class="active">Quad · 2×2</button>
+        <button type="button" data-layout="hero">Hero · 1 big + 2</button>
+        <button type="button" data-layout="triptych">Triptych · 3</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>3 · Selected panel — <span id="panelLabel">Panel 1 of 4</span></legend>
+      <div class="row panel-row">
+        <button type="button" class="panel-pick active" data-panel="0">Panel 1</button>
+        <button type="button" class="panel-pick" data-panel="1">Panel 2</button>
+        <button type="button" class="panel-pick" data-panel="2">Panel 3</button>
+        <button type="button" class="panel-pick" data-panel="3">Panel 4</button>
+      </div>
+      <label>Zoom <span id="zoomVal" class="val">1.00x</span>
+        <input id="zoom" type="range" min="1" max="3" step="0.01" value="1">
+      </label>
+      <label>Pan X <span id="panXVal" class="val">0%</span>
+        <input id="panX" type="range" min="-0.6" max="0.6" step="0.01" value="0">
+      </label>
+      <label>Pan Y <span id="panYVal" class="val">0%</span>
+        <input id="panY" type="range" min="-0.6" max="0.6" step="0.01" value="0">
+      </label>
+      <label>Photo grade
+        <select id="filter">
+          <option value="sunset" selected>Sunset — warm magenta</option>
+          <option value="neon">Neon — electric cyan</option>
+          <option value="noir">Noir — black &amp; white</option>
+          <option value="clean">Clean — untouched</option>
+        </select>
+      </label>
+      <label class="check"><input id="flip" type="checkbox"> Flip photo horizontally</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>4 · Caption</legend>
+      <label>Title <input id="title" type="text" maxlength="24" value="SUNSET HEIST"></label>
+      <label>Subtitle <input id="subtitle" type="text" maxlength="24" value="LEONIDA"></label>
+      <div class="row">
+        <button type="button" data-caption-style="sunset" class="active">Sunset</button>
+        <button type="button" data-caption-style="neon">Neon</button>
+        <button type="button" data-caption-style="mono">Mono</button>
+      </div>
+      <label class="check"><input id="outline" type="checkbox" checked> Bold outline on title</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>5 · Export PNG</legend>
+      <div class="row">
+        <button type="button" data-export-size="square" class="active">1080 × 1080</button>
+        <button type="button" data-export-size="portrait">1080 × 1350</button>
+        <button type="button" data-export-size="wide">1920 × 1080</button>
+      </div>
+      <button id="export" type="button" class="export">Export PNG</button>
+      <p id="status" role="status">Pick a photo to begin — or try a sample.</p>
+    </fieldset>
+    <p class="fineprint">Works fully offline. Your photos never leave this machine. Original art — no Rockstar logos, artwork or fonts.</p>
+  </section>
+  <section class="preview" aria-label="Live preview">
+    <canvas id="cover" width="900" height="900" aria-label="The cover, live preview"></canvas>
+    <p class="preview-hint">Live preview — click a panel to select it, drag to pan, scroll to zoom.</p>
+  </section>
+</main>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
