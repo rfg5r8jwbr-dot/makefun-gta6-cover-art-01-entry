@@ -6,13 +6,16 @@
 // judge reads, with the vendored make.fun library.
 //
 // The app turns 1-4 of the user's own photos into a multi-panel GTA-style
-// poster — Quad, Hero or Triptych layouts, per-panel crop/zoom/pan/grade,
-// bold outlined caption lettering over a code-drawn Vice City sunset with
-// palm silhouettes — and exports it as a PNG in 1080x1080, 1080x1350 or
-// 1920x1080. All decor is drawn in code; no Rockstar logos, artwork or fonts.
-// The two sample photos (app/samples/) were made for make.fun with an image
-// model and are free to use. Screenshots live in screenshots/ (the first by
-// name is the cover) and are listed in shots.json.
+// poster — Quad, Hero, Triptych or Full-bleed layouts, per-panel crop/zoom/
+// pan/grade, Anton caption lettering (OFL, vendored in app/fonts/) with a
+// sunset-gradient fill and a Pacifico script subtitle over a code-drawn Vice
+// City sunset with palm silhouettes — and exports it as a PNG in 1080x1080,
+// 1080x1350 or 1920x1080, one size at a time or all three at once. Photos land
+// face-safe: a wide panel shows the top of a portrait photo, not its middle.
+// All decor is drawn in code; no Rockstar logos, artwork or fonts. The two
+// sample photos (app/samples/) were made for make.fun with an image model and
+// are free to use. Screenshots live in screenshots/ (the first by name is the
+// cover) and are listed in shots.json.
 //
 // Serve it locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
